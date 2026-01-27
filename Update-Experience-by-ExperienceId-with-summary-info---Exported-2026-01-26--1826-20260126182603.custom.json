@@ -1,0 +1,64 @@
+{
+  "name": "Update Experience by ExperienceId with summary info - Exported 2026-01-26 @ 18:26",
+  "integrationType": "salesforce-datadip",
+  "actionType": "custom",
+  "config": {
+    "request": {
+      "requestUrlTemplate": "/services/data/v61.0/sobjects/genesysps__Experience__c/$esc.uriEncode(${input.experienceId})",
+      "requestType": "PATCH",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "requestTemplate": "{\n  \"GC_Copilot_summary_text__c\": \"$esc.jsonString($!{input.human_agent_summary})\",\n  \"GC_Copilot_reason_text__c\": \"$esc.jsonString($!{input.Reason_Text})\",\n  \"GC_Copilot_resolution_text__c\": \"$esc.jsonString($!{input.Resolution_Text})\",\n  \"GC_Copilot_followup_text__c\": \"$esc.jsonString($!{input.Followup_Text})\"\n#if($!{input.virtual_agent_summary} && \"$!{input.virtual_agent_summary}\" != \"\")\n  , \"GC_Virtual_Agent_Summary__c\": \"$esc.jsonString($!{input.virtual_agent_summary})\"\n#end\n}"
+    },
+    "response": {
+      "translationMap": {},
+      "translationMapDefaults": {},
+      "successTemplate": "${rawResult}"
+    }
+  },
+  "contract": {
+    "input": {
+      "inputSchema": {
+        "title": "request",
+        "type": "object",
+        "required": [
+          "experienceId",
+          "human_agent_summary",
+          "Reason_Text",
+          "Followup_Text",
+          "Resolution_Text"
+        ],
+        "properties": {
+          "experienceId": {
+            "type": "string"
+          },
+          "virtual_agent_summary": {
+            "type": "string"
+          },
+          "human_agent_summary": {
+            "type": "string"
+          },
+          "Reason_Text": {
+            "type": "string"
+          },
+          "Followup_Text": {
+            "type": "string"
+          },
+          "Resolution_Text": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "output": {
+      "successSchema": {
+        "title": "response",
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  "secure": false
+}
