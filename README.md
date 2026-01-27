@@ -4,7 +4,7 @@
 
 ## Overview
 
-This guide provides step-by-step instructions for configuring the Genesys Cloud Copilot integration with Salesforce. The setup enables automatic population of AI-generated summaries, wrap-up codes, and interaction data from Genesys Cloud into Salesforce custom objects.
+This guide provides step-by-step instructions for configuring the Genesys Cloud Agent Copilot integration with Salesforce. The setup enables automatic population of AI-generated summaries and insights data from Genesys Cloud into Salesforce objects.
 
 The integration supports two Salesforce objects:
 1. **`genesysps__Experience__c`** - Custom object for messaging interactions
