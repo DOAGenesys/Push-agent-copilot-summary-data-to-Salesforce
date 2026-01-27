@@ -1,0 +1,62 @@
+{
+  "name": "Get Conversation Summary Data v2 - Exported 2026-01-26 @ 18:24",
+  "integrationType": "purecloud-data-actions",
+  "actionType": "custom",
+  "config": {
+    "request": {
+      "requestUrlTemplate": "/api/v2/conversations/$esc.uriEncode($!{input.conversationID})/summaries",
+      "requestType": "GET",
+      "headers": {},
+      "requestTemplate": "${input.rawRequest}"
+    },
+    "response": {
+      "translationMap": {
+        "agentSegments": "$.sessionSummaries[?(@.status == 'Completed' && @.participants)]",
+        "conversationId": "$.conversation.id",
+        "virtualAgentSegments": "$.sessionSummaries[?(@.status == 'Completed' && !@.participants)]"
+      },
+      "translationMapDefaults": {
+        "agentSegments": "[]",
+        "conversationId": "\"\"",
+        "virtualAgentSegments": "[]"
+      },
+      "successTemplate": "{\"conversationId\": ${conversationId}, \"virtualAgentSegmentsJson\": \"$esc.jsonEncode(${virtualAgentSegments})\", \"agentSegmentsJson\": \"$esc.jsonEncode(${agentSegments})\"}"
+    }
+  },
+  "contract": {
+    "input": {
+      "inputSchema": {
+        "title": "request",
+        "type": "object",
+        "required": [
+          "conversationID"
+        ],
+        "properties": {
+          "conversationID": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "output": {
+      "successSchema": {
+        "title": "response",
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "virtualAgentSegmentsJson": {
+            "type": "string"
+          },
+          "agentSegmentsJson": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "secure": false
+}
