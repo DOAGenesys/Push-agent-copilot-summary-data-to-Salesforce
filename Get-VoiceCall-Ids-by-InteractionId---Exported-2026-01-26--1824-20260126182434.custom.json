@@ -1,0 +1,58 @@
+{
+  "name": "Get VoiceCall Ids by InteractionId - Exported 2026-01-26 @ 18:24",
+  "integrationType": "salesforce-datadip",
+  "actionType": "custom",
+  "config": {
+    "request": {
+      "requestUrlTemplate": "/services/data/v61.0/query?q=SELECT+Id,+CreatedDate+FROM+VoiceCall+WHERE+GC_Interaction_Id__c%3D%27$esc.uriEncode(${input.interactionId})%27+ORDER+BY+CreatedDate+ASC",
+      "requestType": "GET",
+      "headers": {},
+      "requestTemplate": "${input.rawRequest}"
+    },
+    "response": {
+      "translationMap": {
+        "voiceCallIds": "$.records[*].Id"
+      },
+      "translationMapDefaults": {
+        "voiceCallIds": "[]"
+      },
+      "successTemplate": "{\n  \"voiceCallIds\": ${voiceCallIds}\n}"
+    }
+  },
+  "contract": {
+    "input": {
+      "inputSchema": {
+        "title": "request",
+        "type": "object",
+        "required": [
+          "interactionId"
+        ],
+        "properties": {
+          "interactionId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "output": {
+      "successSchema": {
+        "title": "response",
+        "type": "object",
+        "required": [
+          "voiceCallIds"
+        ],
+        "properties": {
+          "voiceCallIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "secure": false
+}
