@@ -12,10 +12,7 @@ The integration supports two Salesforce objects:
 
 ## Features
 
-* **Custom Field Configuration**: Comprehensive field mapping for Copilot-generated content
 * **Automated Data Synchronization**: Real-time data flow from Genesys Cloud to Salesforce
-* **Conversation Field Mapping**: Proper mapping of Genesys Cloud conversation IDs
-* **Data Actions Integration**: Pre-configured data actions for seamless API communication
 * **Architect Workflow Automation**: Trigger-based workflow execution
 * **Multi-Channel Support**: Works with both voice calls and messaging conversations
 * **Agent transfer Support**: Works with blind transfers and consultation transfers
