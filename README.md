@@ -1,4 +1,4 @@
-# Genesys Cloud - Salesforce Agent Copilot Backend Integration
+# Salesforce - Genesys Cloud Agent Copilot Backend Integration
 
 **Disclaimer: This configuration guide is intended for research and demonstration purposes. Ensure all configurations are thoroughly tested before deployment to production environments. Verify all security, field mappings, and integration settings according to your organization's standards.**
 
