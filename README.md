@@ -1,4 +1,4 @@
-# Salesforce - Genesys Cloud Agent Copilot Backend Integration
+# CX Cloud - Genesys Cloud Agent Copilot Backend Integration
 
 **Disclaimer: This configuration guide is intended for research and demonstration purposes. Ensure all configurations are thoroughly tested before deployment to production environments. Verify all security, field mappings, and integration settings according to your organization's standards.**
 
@@ -23,11 +23,10 @@ The integration supports two Salesforce objects:
 
 Before beginning the setup, ensure you have:
 
-* Salesforce org with appropriate administrative permissions
-* Genesys Cloud organization with Copilot enabled
-* Genesys Cloud Voice CX Cloud package installed in Salesforce
-* Access to Genesys Cloud Architect and Data Actions
-* Necessary permissions to create custom fields and configure integrations
+* Genesys Cloud organization with Copilot and CX cloud add-on enabled
+* CX Cloud enabled Salesforce org
+* Necessary GC permissions to create data actions and architect workflows
+* Necessary SF permissions to create custom fields and configure integrations
 
 ## Setup Instructions
 
@@ -39,7 +38,7 @@ You need to create custom fields on both the `genesysps__Experience__c` and `Voi
 
 If you're new to creating custom fields in Salesforce, follow these steps:
 
-1. Navigate to **Setup** (click the gear icon in the upper-right corner)
+1. Navigate to **Setup** (click the gear icon in the upper-right corner, see screenshot below)
 2. In the Quick Find box, type "Object Manager" and select it
 3. Find and click on the object you want to add fields to (e.g., `genesysps__Experience__c` or `VoiceCall`)
 4. Click on **Fields & Relationships** in the left sidebar
@@ -56,6 +55,9 @@ If you're new to creating custom fields in Salesforce, follow these steps:
 13. Click **Save**
 
 Repeat this process for each field listed in the tables below.
+
+<img width="3427" height="1223" alt="image" src="https://github.com/user-attachments/assets/3a03c987-faa0-438a-bc9d-8aa08ebb0f05" />
+
 
 #### Fields for genesysps__Experience__c Object
 
