@@ -338,5 +338,3 @@ For additional assistance:
 * **Data Actions Reference**: [https://help.genesys.cloud/articles/about-the-data-actions-integrations](https://help.genesys.cloud/articles/about-the-data-actions-integrations)
 
 ---
-
-**Note**: This integration requires active Genesys Cloud Copilot licenses and proper API permissions in both Genesys Cloud and Salesforce environments.
