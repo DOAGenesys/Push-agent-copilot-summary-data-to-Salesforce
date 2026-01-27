@@ -18,6 +18,7 @@ The integration supports two Salesforce objects:
 * **Data Actions Integration**: Pre-configured data actions for seamless API communication
 * **Architect Workflow Automation**: Trigger-based workflow execution
 * **Multi-Channel Support**: Works with both voice calls and messaging conversations
+* **Agent transfer Support**: Works with blind transfers and consultation transfers
 
 ## Prerequisites
 
@@ -241,12 +242,71 @@ After completing the configuration, test the integration with live interactions:
   7. Verify that the trigger fired and the workflow completed successfully (look for "Success" or "Completed" status)
   8. Check each data action step to see if it executed properly and returned expected data
 
-**Common issues:**
 
-* **Missing data actions**: Ensure all data actions are published in Genesys Cloud
-* **Incorrect field mapping**: Verify that `Conversation.ConversationId` is mapped to the correct Salesforce field
-* **Trigger not enabled**: Confirm the trigger is in "Enabled" state
-* **Workflow errors**: Check that all data actions in the workflow are properly reselected and configured
+## Agent Transfer Support
+
+The integration is designed to handle complex interaction scenarios involving agent transfers, ensuring that Copilot data is properly captured for each agent participant in the conversation lifecycle.
+
+### How Agent Transfers Work
+
+When an interaction involves multiple agents (due to transfers, escalations, or consultations), the integration creates separate Salesforce records for each agent participant:
+
+* **Voice Calls**: Each agent involved in the call gets their own `VoiceCall` record in Salesforce
+* **Messaging Conversations**: Each agent involved gets their own `genesysps__Experience__c` record in Salesforce
+
+**Supported Transfer Types:**
+* **Blind Transfers**: The integration captures data for both the transferring agent and the receiving agent
+* **Consultation Transfers**: The integration captures data for all agents involved in the consultation, including the original agent, consulting agent, and final receiving agent (if applicable)
+
+Both transfer types are fully supported, ensuring complete visibility into multi-agent interactions.
+
+### Data Distribution Across Agent Records
+
+The Copilot-generated data is intelligently distributed across these records:
+
+#### Shared Data (Consistent Across All Agent Records)
+* **`GC_Virtual_Agent_Summary__c`**: Contains the same virtual agent summary across all agent records
+  - This is expected behavior since there is only one virtual agent segment in the conversation
+  - All agents can view the same bot interaction context
+
+#### Agent-Specific Data (Unique to Each Agent Record)
+Each agent's record contains Copilot data specific to their segment of the conversation:
+* **`GC_Copilot_summary_text__c`**: Summary specific to that agent's conversation segment
+* **`GC_Copilot_reason_text__c`**: Reason for contact as understood during that agent's segment
+* **`GC_Copilot_resolution_text__c`**: Resolution actions taken by that specific agent
+* **`GC_Copilot_followup_text__c`**: Follow-up actions relevant to that agent's participation
+
+### Example Scenario
+
+**Customer Journey (Blind Transfer):**
+1. Customer interacts with Virtual Agent (bot segment)
+2. Virtual Agent transfers to Agent A (first agent segment)
+3. Agent A performs a blind transfer to Agent B (second agent segment)
+
+**Resulting Salesforce Records:**
+
+| Record | Virtual Agent Summary | Copilot Summary | Copilot Reason | Copilot Resolution | Copilot Follow-up |
+|--------|----------------------|-----------------|----------------|-------------------|-------------------|
+| **Agent A's Record** | Bot conversation summary | Agent A's segment summary | Reason during Agent A's segment | Agent A's resolution actions | Agent A's follow-up notes |
+| **Agent B's Record** | Bot conversation summary (same) | Agent B's segment summary | Reason during Agent B's segment | Agent B's resolution actions | Agent B's follow-up notes |
+
+### Benefits of This Approach
+
+* **Complete Context**: Each agent has visibility into the virtual agent interaction through the shared summary
+* **Accurate Attribution**: Copilot insights are correctly attributed to the specific agent who handled that portion of the interaction
+* **Audit Trail**: Maintains a complete record of each agent's contribution to the resolution
+* **Reporting Flexibility**: Enables accurate performance metrics per agent, even in transferred interactions
+
+### Important Considerations
+
+* The `GC_Interaction_Id__c` field will contain the same conversation ID across all agent records for the same interaction
+* Each record represents a distinct participant's view of the conversation
+* Copilot data is generated based on what occurred during each agent's active participation in the conversation
+* Virtual Agent summaries remain consistent because the bot interaction is a single, shared segment
+* **Transfer Type Handling**:
+  - **Blind Transfers**: Both the transferring and receiving agents get separate records with their respective Copilot data
+  - **Consultation Transfers**: All participating agents (initiating agent, consulting agent, and any subsequent agents) receive their own records with segment-specific Copilot insights
+
 
 ## Key Configuration Files
 
