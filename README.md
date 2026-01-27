@@ -29,6 +29,17 @@ Before beginning the setup, ensure you have:
 * Necessary GC permissions to create data actions and architect workflows
 * Necessary SF permissions to create custom fields and configure integrations
 
+## Architecture Overview
+
+The integration follows this data flow:
+
+1. **Interaction Completion**: A voice call or messaging conversation ends in Genesys Cloud
+2. **Trigger Activation**: The configured trigger detects the conversation end event
+3. **Workflow Execution**: The Architect workflow executes, calling the imported data actions
+4. **Copilot Data Retrieval**: Data actions fetch Copilot-generated summaries and insights
+5. **Salesforce Update**: Data is synchronized to the appropriate Salesforce object fields
+6. **Data Availability**: Copilot data becomes visible in Salesforce record (within a few seconds, depending on the Workflow configuration)
+
 ## Setup Instructions
 
 ### Step 1: Create Custom Fields in Salesforce
@@ -314,17 +325,6 @@ Each agent's record contains Copilot data specific to their segment of the conve
 * **Architect Workflow**: Flow configuration for automated data synchronization
 * **Trigger Configuration**: Event-based trigger settings for workflow execution
 * **Field Mapping Configuration**: Salesforce field mapping definitions
-
-## Architecture Overview
-
-The integration follows this data flow:
-
-1. **Interaction Completion**: A voice call or messaging conversation ends in Genesys Cloud
-2. **Trigger Activation**: The configured trigger detects the conversation end event
-3. **Workflow Execution**: The Architect workflow executes, calling the imported data actions
-4. **Copilot Data Retrieval**: Data actions fetch Copilot-generated summaries and insights
-5. **Salesforce Update**: Data is synchronized to the appropriate Salesforce object fields
-6. **Data Availability**: Copilot data becomes visible in Salesforce record (within a few seconds, depending on the Workflow configuration)
 
 ## Post-Configuration Best Practices
 
