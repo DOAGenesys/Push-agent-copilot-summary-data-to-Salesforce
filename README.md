@@ -188,7 +188,7 @@ Configure the trigger that initiates the Copilot data synchronization process:
    - **Description**: Add a description of the trigger's purpose
    
    **Event Configuration:**
-   - **Topic**: v2.detail.events.conversation.{id}.acw
+   - **Topic**: v2.detail.events.conversation.{id}.acw. Note: this topic may duplicate Salesforce API callouts when there are more than one agent involved in the interaction, but it is the safest way to ensure that in case the agent edits the summary data, we push the edited data, not the original one.
    
    **Workflow Association:**
    - **Target**: Select "Workflow"
