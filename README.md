@@ -172,7 +172,7 @@ Set up the Architect workflow that triggers the Copilot data synchronization:
 <img width="2880" height="1064" alt="image" src="https://github.com/user-attachments/assets/ea034e59-112f-48e2-b986-b2e469353a37" />
 
 
-**Important**: By default the Workflow is configured to wait 10 seconds at the beginning to make sure we give enough time to the LLM to build the summaries.
+**Important**: By default the Workflow is configured to wait 5 seconds at the beginning to make sure we give enough time to the LLM to build the summaries.
 
 ### Step 5: Create and Enable the Trigger
 
@@ -188,7 +188,7 @@ Configure the trigger that initiates the Copilot data synchronization process:
    - **Description**: Add a description of the trigger's purpose
    
    **Event Configuration:**
-   - **Topic**: v2.detail.events.conversation.{id}.customer.end
+   - **Topic**: v2.detail.events.conversation.{id}.acw
    
    **Workflow Association:**
    - **Target**: Select "Workflow"
@@ -198,7 +198,8 @@ Configure the trigger that initiates the Copilot data synchronization process:
 5. Click **Save**
 6. Toggle the trigger status to **Enabled** (the toggle switch should turn green/active)
 
-<img width="1487" height="859" alt="image" src="https://github.com/user-attachments/assets/55402033-2c48-4c1f-aadb-3694281a086b" />
+
+<img width="1533" height="989" alt="image" src="https://github.com/user-attachments/assets/311aa18a-9fda-440a-949a-5399c1eb7806" />
 
 
 
@@ -212,7 +213,7 @@ After completing the configuration, test the integration with live interactions:
 
 1. Place a test voice call through Genesys Cloud. That test call must hit first a Virtual Agent with summarization turned on, and then, the VA must transfer to the agent at some point. In both segments of the conversation, make sure to reproduce a long conversation enough to produce a summary (several sentences each will do it)
 2. Complete the call and ensure the agent enters After Call Work (ACW)
-3. Wait a few seconds (by default the Workflow is configured to 10 seconds) for data synchronization
+3. Wait a few seconds (by default the Workflow is configured to 5 seconds) for data synchronization
 4. In Salesforce, navigate to the corresponding **VoiceCall** record
 5. Verify that Copilot-generated data appears in the custom fields:
    - `GC_Copilot_summary_text__c` should contain the conversation summary
@@ -224,7 +225,7 @@ After completing the configuration, test the integration with live interactions:
 
 1. Initiate a test messaging conversation through Genesys Cloud
 2. Complete the conversation and ensure proper wrap-up
-3. Wait a few seconds (by default the Workflow is configured to 10 seconds) for data synchronization
+3. Wait a few seconds (by default the Workflow is configured to 5 seconds) for data synchronization
 4. In Salesforce, navigate to the corresponding **genesysps__Experience__c** record
 5. Verify that Copilot-generated data appears in the custom fields (same fields as voice)
 
