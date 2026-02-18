@@ -48,10 +48,12 @@
             "type": "string"
           },
           "virtualAgentSegmentsJson": {
-            "type": "string"
+            "type": "string",
+            "description": "JSON string containing virtual agent segments. Each segment includes: text, reason, followup, resolution, editedSummary, editedReason, editedResolution, editedFollowup, and predictedWrapupCodes (with name and confidence per entry)."
           },
           "agentSegmentsJson": {
-            "type": "string"
+            "type": "string",
+            "description": "JSON string containing agent segments. Each segment includes: text, reason, followup, resolution, editedSummary, editedReason, editedResolution, editedFollowup, and predictedWrapupCodes (with name and confidence per entry)."
           }
         },
         "additionalProperties": false

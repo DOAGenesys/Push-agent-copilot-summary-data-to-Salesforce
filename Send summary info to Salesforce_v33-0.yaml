@@ -1,0 +1,480 @@
+workflow:
+  name: Send summary info to Salesforce
+  description: Push summary info to SF
+  division: Home
+  startUpRef: "/workflow/states/state[Initial State_10]"
+  defaultLanguage: en-gb
+  supportedLanguages:
+    en-gb:
+      none: true
+  variables:
+    - stringVariable:
+        name: Flow.agentSummary
+        initialValue:
+          noValue: true
+        isInput: false
+        isOutput: false
+    - stringVariable:
+        name: Flow.botSummary
+        initialValue:
+          noValue: true
+        isInput: false
+        isOutput: false
+    - stringVariable:
+        name: Flow.conversationId
+        initialValue:
+          noValue: true
+        isInput: true
+        isOutput: false
+    - stringVariable:
+        name: Flow.finalSummary
+        initialValue:
+          noValue: true
+        isInput: false
+        isOutput: false
+    - stringVariable:
+        name: Flow.followUp
+        initialValue:
+          noValue: true
+        isInput: false
+        isOutput: false
+    - stringVariable:
+        name: Flow.mediaType
+        initialValue:
+          noValue: true
+        isInput: true
+        isOutput: false
+    - stringVariable:
+        name: Flow.reason
+        initialValue:
+          noValue: true
+        isInput: false
+        isOutput: false
+    - stringVariable:
+        name: Flow.resolution
+        initialValue:
+          noValue: true
+        isInput: false
+        isOutput: false
+  settingsErrorHandling:
+    errorHandling:
+      endWorkflow:
+        none: true
+  states:
+    - state:
+        name: Initial State
+        refId: Initial State_10
+        variables:
+          - stringVariable:
+              name: State.agentSegments
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - jsonCollectionVariable:
+              name: State.agentSegmentsArray
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - jsonVariable:
+              name: State.agentSegmentsJSON
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - stringCollectionVariable:
+              name: State.experienceIds
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - stringVariable:
+              name: State.getSummaryErrorCode
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - stringVariable:
+              name: State.getSummaryErrorUserMessage
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - integerVariable:
+              name: State.loopCounter
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - stringVariable:
+              name: State.updateExperienceErrorCode
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - stringVariable:
+              name: State.updateVCErrorCode
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - stringVariable:
+              name: State.VASegments
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - jsonCollectionVariable:
+              name: State.VASegmentsArray
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - jsonVariable:
+              name: State.VASegmentsJSON
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+          - stringCollectionVariable:
+              name: State.voiceCallIds
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+        actions:
+          - wait:
+              name: Wait for summary to be available
+              trimDurationNearMaxRunningTime:
+                lit: false
+              duration:
+                lit:
+                  seconds: 5
+          - switch:
+              name: Switch
+              evaluate:
+                firstMatch:
+                  string:
+                    value:
+                      exp: Flow.mediaType
+                    default:
+                      actions:
+                        - endWorkflow:
+                            name: End Workflow
+                            exitReason:
+                              noValue: true
+                    cases:
+                      - case:
+                          value:
+                            lit: VOICE
+                          actions:
+                            - callData:
+                                name: Call Data Action
+                                timeout:
+                                  lit:
+                                    minutes: 1
+                                category:
+                                  SF - DAs - CX Cloud dev org:
+                                    dataAction:
+                                      Get VoiceCall Ids by InteractionId:
+                                        inputs:
+                                          interactionId:
+                                            exp: Flow.conversationId
+                                        successOutputs:
+                                          voiceCallIds:
+                                            var: State.voiceCallIds
+                                        failureOutputs:
+                                          errorCode:
+                                            noValue: true
+                                          status:
+                                            noValue: true
+                                          correlationId:
+                                            noValue: true
+                                          entityId:
+                                            noValue: true
+                                          entityName:
+                                            noValue: true
+                                          userMessage:
+                                            noValue: true
+                                          userParamsMessage:
+                                            noValue: true
+                                          userParams.key:
+                                            noValue: true
+                                          userParams.value:
+                                            noValue: true
+                                          details.errorCode:
+                                            noValue: true
+                                          details.fieldName:
+                                            noValue: true
+                                          details.entityId:
+                                            noValue: true
+                                          details.entityName:
+                                            noValue: true
+                      - case:
+                          value:
+                            lit: MESSAGE
+                          actions:
+                            - callData:
+                                name: Call Data Action
+                                timeout:
+                                  lit:
+                                    minutes: 1
+                                category:
+                                  SF - DAs - CX Cloud dev org:
+                                    dataAction:
+                                      Get Experience Ids by InteractionId:
+                                        inputs:
+                                          interactionId:
+                                            exp: Flow.conversationId
+                                        successOutputs:
+                                          experienceIds:
+                                            var: State.experienceIds
+                                        failureOutputs:
+                                          errorCode:
+                                            noValue: true
+                                          status:
+                                            noValue: true
+                                          correlationId:
+                                            noValue: true
+                                          entityId:
+                                            noValue: true
+                                          entityName:
+                                            noValue: true
+                                          userMessage:
+                                            noValue: true
+                                          userParamsMessage:
+                                            noValue: true
+                                          userParams.key:
+                                            noValue: true
+                                          userParams.value:
+                                            noValue: true
+                                          details.errorCode:
+                                            noValue: true
+                                          details.fieldName:
+                                            noValue: true
+                                          details.entityId:
+                                            noValue: true
+                                          details.entityName:
+                                            noValue: true
+          - callData:
+              name: Call Data Action
+              timeout:
+                lit:
+                  minutes: 1
+              category:
+                Genesys Cloud Data Actions - 2:
+                  dataAction:
+                    Get Conversation Summary Data v2:
+                      inputs:
+                        conversationID:
+                          exp: Flow.conversationId
+                      successOutputs:
+                        conversationId:
+                          noValue: true
+                        virtualAgentSegmentsJson:
+                          var: State.VASegments
+                        agentSegmentsJson:
+                          var: State.agentSegments
+                      failureOutputs:
+                        errorCode:
+                          var: State.getSummaryErrorCode
+                        status:
+                          noValue: true
+                        correlationId:
+                          noValue: true
+                        entityId:
+                          noValue: true
+                        entityName:
+                          noValue: true
+                        userMessage:
+                          var: State.getSummaryErrorUserMessage
+                        userParamsMessage:
+                          noValue: true
+                        userParams.key:
+                          noValue: true
+                        userParams.value:
+                          noValue: true
+                        details.errorCode:
+                          noValue: true
+                        details.fieldName:
+                          noValue: true
+                        details.entityId:
+                          noValue: true
+                        details.entityName:
+                          noValue: true
+              outputs:
+                success:
+                  actions:
+                    - decision:
+                        name: Decision
+                        condition:
+                          exp: IsNotSetOrEmpty(State.agentSegments)
+                        outputs:
+                          "yes":
+                            actions:
+                              - updateData:
+                                  name: JSON-ize
+                                  statements:
+                                    - json:
+                                        variable: State.agentSegmentsJSON
+                                        value:
+                                          exp: JsonParse(State.VASegments)
+                                    - jsonCollection:
+                                        variable: State.agentSegmentsArray
+                                        value:
+                                          exp: ToJsonCollection(State.VASegmentsJSON)
+                          "no":
+                            actions:
+                              - updateData:
+                                  name: JSON-ize
+                                  statements:
+                                    - json:
+                                        variable: State.agentSegmentsJSON
+                                        value:
+                                          exp: "JsonParse(State.agentSegments)\n\n"
+                                    - json:
+                                        variable: State.VASegmentsJSON
+                                        value:
+                                          exp: "JsonParse(State.VASegments)\n\n"
+                                    - jsonCollection:
+                                        variable: State.agentSegmentsArray
+                                        value:
+                                          exp: ToJsonCollection(State.agentSegmentsJSON)
+                                    - jsonCollection:
+                                        variable: State.VASegmentsArray
+                                        value:
+                                          exp: ToJsonCollection(State.VASegmentsJSON)
+          - loop:
+              name: Loop
+              currentIndex:
+                var: State.loopCounter
+              loopCount:
+                exp: Count(State.agentSegmentsArray)
+              outputs:
+                loop:
+                  actions:
+                    - switch:
+                        name: Switch
+                        evaluate:
+                          firstMatch:
+                            string:
+                              value:
+                                exp: Flow.mediaType
+                              default:
+                                actions:
+                                  - endWorkflow:
+                                      name: End Workflow
+                                      exitReason:
+                                        noValue: true
+                              cases:
+                                - case:
+                                    value:
+                                      lit: VOICE
+                                    actions:
+                                      - callData:
+                                          name: Call Data Action
+                                          timeout:
+                                            lit:
+                                              minutes: 1
+                                          category:
+                                            SF - DAs - CX Cloud dev org:
+                                              dataAction:
+                                                Update VoiceCall by VoiceCallId with summary info:
+                                                  inputs:
+                                                    voiceCallId:
+                                                      exp: "State.voiceCallIds[State.loopCounter]\n"
+                                                    virtual_agent_summary:
+                                                      exp: If(IsNotSetOrEmpty(State.VASegmentsArray),NOT_SET ,ToString(GetJsonObjectProperty(GetAt(State.VASegmentsArray, 0),"text")))
+                                                    human_agent_summary:
+                                                      exp: If(IsNotSetOrEmpty(State.agentSegmentsArray),NOT_SET,If(IsSet(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedSummary")),If(IsSet(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedSummary"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedSummary"),"text")),ToString(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"text"))),ToString(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"text"))))
+                                                    Reason_Text:
+                                                      exp: If(IsNotSetOrEmpty(State.agentSegmentsArray),NOT_SET,If(IsSet(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedReason")),If(IsSet(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedReason"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedReason"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"reason"),"text"))),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"reason"),"text"))))
+                                                    Followup_Text:
+                                                      exp: If(IsNotSetOrEmpty(State.agentSegmentsArray),NOT_SET,If(IsSet(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedFollowup")),If(IsSet(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedFollowup"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedFollowup"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"followup"),"text"))),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"followup"),"text"))))
+                                                    Resolution_Text:
+                                                      exp: If(IsNotSetOrEmpty(State.agentSegmentsArray),NOT_SET,If(IsSet(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedResolution")),If(IsSet(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedResolution"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedResolution"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"resolution"),"text"))),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"resolution"),"text"))))
+                                                  failureOutputs:
+                                                    errorCode:
+                                                      var: State.updateVCErrorCode
+                                                    status:
+                                                      noValue: true
+                                                    correlationId:
+                                                      noValue: true
+                                                    entityId:
+                                                      noValue: true
+                                                    entityName:
+                                                      noValue: true
+                                                    userMessage:
+                                                      noValue: true
+                                                    userParamsMessage:
+                                                      noValue: true
+                                                    userParams.key:
+                                                      noValue: true
+                                                    userParams.value:
+                                                      noValue: true
+                                                    details.errorCode:
+                                                      noValue: true
+                                                    details.fieldName:
+                                                      noValue: true
+                                                    details.entityId:
+                                                      noValue: true
+                                                    details.entityName:
+                                                      noValue: true
+                                - case:
+                                    value:
+                                      lit: MESSAGE
+                                    actions:
+                                      - callData:
+                                          name: Call Data Action
+                                          timeout:
+                                            lit:
+                                              minutes: 1
+                                          category:
+                                            SF - DAs - CX Cloud dev org:
+                                              dataAction:
+                                                Update Experience by ExperienceId with summary info:
+                                                  inputs:
+                                                    experienceId:
+                                                      exp: State.experienceIds[State.loopCounter]
+                                                    virtual_agent_summary:
+                                                      exp: If(IsNotSetOrEmpty(State.VASegmentsArray),NOT_SET ,ToString(GetJsonObjectProperty(GetAt(State.VASegmentsArray, 0),"text")))
+                                                    human_agent_summary:
+                                                      exp: If(IsNotSetOrEmpty(State.agentSegmentsArray),NOT_SET,If(IsSet(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedSummary")),If(IsSet(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedSummary"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedSummary"),"text")),ToString(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"text"))),ToString(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"text"))))
+                                                    Reason_Text:
+                                                      exp: If(IsNotSetOrEmpty(State.agentSegmentsArray),NOT_SET,If(IsSet(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedReason")),If(IsSet(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedReason"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedReason"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"reason"),"text"))),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"reason"),"text"))))
+                                                    Followup_Text:
+                                                      exp: If(IsNotSetOrEmpty(State.agentSegmentsArray),NOT_SET,If(IsSet(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedFollowup")),If(IsSet(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedFollowup"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedFollowup"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"followup"),"text"))),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"followup"),"text"))))
+                                                    Resolution_Text:
+                                                      exp: If(IsNotSetOrEmpty(State.agentSegmentsArray),NOT_SET,If(IsSet(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedResolution")),If(IsSet(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedResolution"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"editedResolution"),"text")),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"resolution"),"text"))),ToString(GetJsonObjectProperty(GetJsonObjectProperty(GetAt(State.agentSegmentsArray, State.loopCounter),"resolution"),"text"))))
+                                                  failureOutputs:
+                                                    errorCode:
+                                                      var: State.updateExperienceErrorCode
+                                                    status:
+                                                      noValue: true
+                                                    correlationId:
+                                                      noValue: true
+                                                    entityId:
+                                                      noValue: true
+                                                    entityName:
+                                                      noValue: true
+                                                    userMessage:
+                                                      noValue: true
+                                                    userParamsMessage:
+                                                      noValue: true
+                                                    userParams.key:
+                                                      noValue: true
+                                                    userParams.value:
+                                                      noValue: true
+                                                    details.errorCode:
+                                                      noValue: true
+                                                    details.fieldName:
+                                                      noValue: true
+                                                    details.entityId:
+                                                      noValue: true
+                                                    details.entityName:
+                                                      noValue: true
+          - endWorkflow:
+              name: End Workflow
+              exitReason:
+                noValue: true
