@@ -6,7 +6,7 @@
 
 This guide provides step-by-step instructions for configuring the Genesys Cloud Agent Copilot integration with Salesforce. The setup enables automatic population of AI-generated summaries and insights data from Genesys Cloud into Salesforce objects.
 
-This integration is designed to work in conjunction with the **[CX Cloud After Call Work (ACW) Component](https://help.genesys.cloud/articles/configure-the-after-call-work-component/)**. The ACW Component serves as the **frontend** of the integration — it is where agents review, edit, and confirm AI-generated summaries before clicking the "Done" button. The trigger, Architect workflow, and data actions documented in this guide are the **backend** — they detect the ACW completion event and push the (potentially edited) summary data to Salesforce.
+This integration is designed to work in conjunction with the **[CX Cloud After Call Work (ACW) Component](https://help.genesys.cloud/articles/configure-the-after-call-work-component/)**. The ACW Component serves as the **frontend** of the integration, where agents review, edit, and confirm AI-generated summaries before clicking the "Done" button. The trigger, Architect workflow, and data actions documented in this guide are the **backend**: they detect the ACW completion event and push the (potentially edited) summary data to Salesforce.
 
 The integration supports two Salesforce objects:
 1. **`genesysps__Experience__c`** - Custom object for messaging interactions
@@ -46,7 +46,7 @@ The integration follows this data flow:
 2. **Agent Review (Frontend)**: The agent sees the AI-generated summaries in the CX Cloud ACW Component. They can review and optionally edit the summary before clicking "Done"
 3. **Trigger Activation (Backend)**: The configured trigger detects the ACW completion event (`v2.detail.events.conversation.{id}.acw`)
 4. **Workflow Execution (Backend)**: The Architect workflow executes, calling the imported data actions
-5. **Copilot Data Retrieval (Backend)**: Data actions fetch Copilot-generated summaries and insights — including any edits made by the agent in the ACW Component
+5. **Copilot Data Retrieval (Backend)**: Data actions fetch Copilot-generated summaries and insights, including any edits made by the agent in the ACW Component
 6. **Salesforce Update (Backend)**: Data is synchronized to the appropriate Salesforce object fields
 7. **Data Availability**: Copilot data becomes visible in Salesforce record (within a few seconds, depending on the Workflow configuration)
 
@@ -269,11 +269,11 @@ Each field is populated with its own distinct, AI-generated value. This is the i
 
 #### Scenario 2: Agent Edits the Summary (Known API Limitation)
 
-When the agent **edits the summary** via the Genesys Cloud Agent Copilot panel, a **known limitation of the Genesys Cloud API** affects how the data is distributed across Salesforce fields:
+When the agent **edits the summary** via the CX Cloud ACW Component, a **known limitation of the Genesys Cloud API** affects how the data is distributed across Salesforce fields:
 
 | Salesforce Field | Source | Behavior |
 |------------------|--------|----------|
-| **GC Copilot Summary Text** | `agentSegment.editedSummary.text` | ⚠️ Contains **ALL edits** consolidated into a single text blob |
+| **GC Copilot Summary Text** | `agentSegment.editedSummary.text` | Contains **ALL edits** consolidated into a single text blob (see explanation below) |
 | **GC Copilot Reason Text** | `agentSegment.reason.text` | Falls back to **original** AI-generated value |
 | **GC Copilot Follow-up Text** | `agentSegment.followup.text` | Falls back to **original** AI-generated value |
 | **GC Copilot Resolution Text** | `agentSegment.resolution.text` | Falls back to **original** AI-generated value |
@@ -305,7 +305,7 @@ This is the response structure returned by the Genesys Cloud API (`GET /api/v2/c
 }
 ```
 
-Because `editedReason`, `editedResolution`, and `editedFollowup` are empty objects (no `.text` property), the workflow correctly falls back to the original AI-generated values for those fields. Meanwhile, the `editedSummary.text` field contains the full edited content — including the agent's changes to reason, resolution, and followup — all within a single text block.
+Because `editedReason`, `editedResolution`, and `editedFollowup` are empty objects (no `.text` property), the workflow correctly falls back to the original AI-generated values for those fields. Meanwhile, `editedSummary.text` contains the full edited content, including the agent's changes to reason, resolution, and followup, all within a single text block.
 
 > **Note**: This is a Genesys Cloud API behavior, not a workflow bug. The Architect workflow correctly implements the prioritization logic: _use edited if available, otherwise fall back to original_. The limitation is that the API does not split the agent's edits into individual `editedReason`, `editedFollowup`, and `editedResolution` fields.
 
@@ -321,22 +321,22 @@ The workflow follows this execution order:
 1. WAIT 5 seconds (give the LLM time to generate summaries)
        │
 2. SWITCH on Flow.mediaType
-       ├── VOICE → Call "Get VoiceCall Ids by InteractionId" → State.voiceCallIds
-       ├── MESSAGE → Call "Get Experience Ids by InteractionId" → State.experienceIds
-       └── Default → End Workflow
+       |-- VOICE: Call "Get VoiceCall Ids by InteractionId" -> State.voiceCallIds
+       |-- MESSAGE: Call "Get Experience Ids by InteractionId" -> State.experienceIds
+       +-- Default: End Workflow
        │
-3. Call "Get Conversation Summary Data v2" → State.VASegments, State.agentSegments
+3. Call "Get Conversation Summary Data v2" -> State.VASegments, State.agentSegments
        │
 4. DECISION: Is State.agentSegments empty?
-       ├── YES → Parse only VA segments into State.agentSegmentsArray (fallback scenario)
-       └── NO  → Parse both VA and agent segments into their respective arrays
+       |-- YES: Parse only VA segments into State.agentSegmentsArray (fallback scenario)
+       +-- NO:  Parse both VA and agent segments into their respective arrays
        │
 5. LOOP over State.agentSegmentsArray (one iteration per agent segment)
        │
-       └── SWITCH on Flow.mediaType
-             ├── VOICE → Call "Update VoiceCall by VoiceCallId with summary info"
-             ├── MESSAGE → Call "Update Experience by ExperienceId with summary info"
-             └── Default → End Workflow
+       +-- SWITCH on Flow.mediaType
+             |-- VOICE: Call "Update VoiceCall by VoiceCallId with summary info"
+             |-- MESSAGE: Call "Update Experience by ExperienceId with summary info"
+             +-- Default: End Workflow
        │
 6. End Workflow
 ```
@@ -345,7 +345,7 @@ The workflow follows this execution order:
 
 The workflow sends **6 input fields** to the Salesforce update data action. Each field uses a specific expression to determine which value to send:
 
-##### 1. `virtual_agent_summary` — Virtual Agent (Bot) Summary
+##### 1. `virtual_agent_summary` - Virtual Agent (Bot) Summary
 
 ```
 If(IsNotSetOrEmpty(State.VASegmentsArray),
@@ -356,73 +356,73 @@ If(IsNotSetOrEmpty(State.VASegmentsArray),
 
 **Logic**: Simple two-level check. If the VA segments array is empty/missing, send `NOT_SET`. Otherwise, always take the `.text` from the first (index 0) virtual agent segment. There is no "edited" variant for the bot summary.
 
-##### 2. `human_agent_summary` — Agent Copilot Summary Text
+##### 2. `human_agent_summary` - Agent Copilot Summary Text
 
 ```
-If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           ← Level 1
-  If(IsSet(segment.editedSummary),                                ← Level 2
-    If(IsSet(segment.editedSummary.text),                         ← Level 3
-      ToString(segment.editedSummary.text),                       ←   YES → edited
-      ToString(segment.text)                                      ←   NO  → original
+If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           // Level 1
+  If(IsSet(segment.editedSummary),                                // Level 2
+    If(IsSet(segment.editedSummary.text),                         // Level 3
+      ToString(segment.editedSummary.text),                       //   YES -> use edited
+      ToString(segment.text)                                      //   NO  -> use original
     ),
-    ToString(segment.text)                                        ← Property missing → original
+    ToString(segment.text)                                        // Property missing -> use original
   )
 )
 ```
 
 > Where `segment` is a shorthand for `GetAt(State.agentSegmentsArray, State.loopCounter)`
 
-**Logic**: Three-level nested `If`. Falls back from `editedSummary.text` → `segment.text` (the original AI-generated summary).
+**Logic**: Three-level nested `If`. Falls back from `editedSummary.text` to `segment.text` (the original AI-generated summary).
 
-##### 3. `Reason_Text` — Copilot Reason Text
+##### 3. `Reason_Text` - Copilot Reason Text
 
 ```
-If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           ← Level 1
-  If(IsSet(segment.editedReason),                                 ← Level 2
-    If(IsSet(segment.editedReason.text),                          ← Level 3
-      ToString(segment.editedReason.text),                        ←   YES → edited
-      ToString(segment.reason.text)                               ←   NO  → original
+If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           // Level 1
+  If(IsSet(segment.editedReason),                                 // Level 2
+    If(IsSet(segment.editedReason.text),                          // Level 3
+      ToString(segment.editedReason.text),                        //   YES -> use edited
+      ToString(segment.reason.text)                               //   NO  -> use original
     ),
-    ToString(segment.reason.text)                                 ← Property missing → original
+    ToString(segment.reason.text)                                 // Property missing -> use original
   )
 )
 ```
 
-**Logic**: Same three-level pattern. Falls back from `editedReason.text` → `reason.text`.
+**Logic**: Same three-level pattern. Falls back from `editedReason.text` to `reason.text`.
 
-##### 4. `Followup_Text` — Copilot Follow-up Text
+##### 4. `Followup_Text` - Copilot Follow-up Text
 
 ```
-If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           ← Level 1
-  If(IsSet(segment.editedFollowup),                               ← Level 2
-    If(IsSet(segment.editedFollowup.text),                        ← Level 3
-      ToString(segment.editedFollowup.text),                      ←   YES → edited
-      ToString(segment.followup.text)                             ←   NO  → original
+If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           // Level 1
+  If(IsSet(segment.editedFollowup),                               // Level 2
+    If(IsSet(segment.editedFollowup.text),                        // Level 3
+      ToString(segment.editedFollowup.text),                      //   YES -> use edited
+      ToString(segment.followup.text)                             //   NO  -> use original
     ),
-    ToString(segment.followup.text)                               ← Property missing → original
+    ToString(segment.followup.text)                               // Property missing -> use original
   )
 )
 ```
 
-**Logic**: Same three-level pattern. Falls back from `editedFollowup.text` → `followup.text`.
+**Logic**: Same three-level pattern. Falls back from `editedFollowup.text` to `followup.text`.
 
-##### 5. `Resolution_Text` — Copilot Resolution Text
+##### 5. `Resolution_Text` - Copilot Resolution Text
 
 ```
-If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           ← Level 1
-  If(IsSet(segment.editedResolution),                             ← Level 2
-    If(IsSet(segment.editedResolution.text),                      ← Level 3
-      ToString(segment.editedResolution.text),                    ←   YES → edited
-      ToString(segment.resolution.text)                           ←   NO  → original
+If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           // Level 1
+  If(IsSet(segment.editedResolution),                             // Level 2
+    If(IsSet(segment.editedResolution.text),                      // Level 3
+      ToString(segment.editedResolution.text),                    //   YES -> use edited
+      ToString(segment.resolution.text)                           //   NO  -> use original
     ),
-    ToString(segment.resolution.text)                             ← Property missing → original
+    ToString(segment.resolution.text)                             // Property missing -> use original
   )
 )
 ```
 
-**Logic**: Same three-level pattern. Falls back from `editedResolution.text` → `resolution.text`.
+**Logic**: Same three-level pattern. Falls back from `editedResolution.text` to `resolution.text`.
 
-##### 6. `voiceCallId` / `experienceId` — Salesforce Record Identifier
+##### 6. `voiceCallId` / `experienceId` - Salesforce Record Identifier
 
 ```
 State.voiceCallIds[State.loopCounter]    (VOICE path)
@@ -437,15 +437,15 @@ The three-level `IsSet` check is necessary because the Genesys Cloud API can ret
 
 | API Response State | Example JSON | Level 2 (`IsSet(editedX)`) | Level 3 (`IsSet(editedX.text)`) | Result |
 |--------------------|-------------|----------------------------|--------------------------------|--------|
-| **Property missing entirely** | _(field absent from JSON)_ | `false` → skip to fallback | _(not evaluated)_ | ✅ Uses original |
-| **Property exists but empty** (`{}`) | `"editedReason": {}` | `true` → enter Level 3 | `false` → skip to fallback | ✅ Uses original |
-| **Property exists with text** | `"editedReason": {"text": "..."}` | `true` → enter Level 3 | `true` → use edited | ✅ Uses edited |
+| **Property missing entirely** | _(field absent from JSON)_ | `false` - skip to fallback | _(not evaluated)_ | Uses original |
+| **Property exists but empty** (`{}`) | `"editedReason": {}` | `true` - enter Level 3 | `false` - skip to fallback | Uses original |
+| **Property exists with text** | `"editedReason": {"text": "..."}` | `true` - enter Level 3 | `true` - use edited | Uses edited |
 
-Without Level 2, calling `GetJsonObjectProperty(editedX, "text")` on a `NOT_SET` value (missing property) would cause a **runtime crash** in Architect. Without Level 3, an empty object `{}` would also cause issues. The two-level guard ensures the workflow is resilient to all possible API response variations.
+Without Level 2, calling `GetJsonObjectProperty(editedX, "text")` on a `NOT_SET` value (missing property) would cause a **runtime crash** in Architect. Without Level 3, an empty object `{}` would also cause issues. The two-level guard makes sure the workflow can handle all possible API response variations.
 
 #### All Possible Scenarios Matrix
 
-Here is a comprehensive matrix of all possible API response scenarios and what the workflow writes to each Salesforce field:
+Here is a matrix of all the possible API response scenarios and what the workflow writes to each Salesforce field:
 
 | # | `editedSummary` | `editedReason` | `editedFollowup` | `editedResolution` | SF Summary | SF Reason | SF Follow-up | SF Resolution |
 |---|-----------------|----------------|-------------------|--------------------|-----------:|----------:|-------------:|-------------:|
@@ -458,7 +458,7 @@ Here is a comprehensive matrix of all possible API response scenarios and what t
 
 - **Scenario 1**: No edited fields exist at all (property missing from JSON). All fields fall back to originals.
 - **Scenario 2**: Edited fields exist but are empty objects. All fields fall back to originals.
-- **Scenario 3**: The most common "edited" scenario (as seen in the Genesys Cloud Agent Copilot UI). The agent edited the summary, but reason/followup/resolution were not individually edited.
+- **Scenario 3**: The most common "edited" scenario (as seen in the CX Cloud ACW Component). The agent edited the summary, but reason/followup/resolution were not individually edited.
 - **Scenario 4**: Ideal scenario where all fields have been individually edited.
 - **Scenario 5**: Mixed scenario (some fields edited individually, others not).
 - **Scenario 6**: No agent segments at all (the `agentSegmentsArray` is empty). All fields are set to `NOT_SET`.
@@ -473,7 +473,7 @@ Both the **VOICE** and **MESSAGE** paths in the workflow use **identical express
 | **Data Action** | `Update VoiceCall by VoiceCallId with summary info` | `Update Experience by ExperienceId with summary info` |
 | **Summary expressions** | _(identical)_ | _(identical)_ |
 
-This ensures consistent behavior regardless of whether the interaction was a voice call or a messaging conversation.
+This keeps behavior consistent regardless of whether the interaction was a voice call or a messaging conversation.
 
 ---
 
@@ -516,7 +516,7 @@ Both transfer types are fully supported, ensuring complete visibility into multi
 
 ### Data Distribution Across Agent Records
 
-The Copilot-generated data is intelligently distributed across these records:
+The Copilot-generated data is distributed across these records as follows:
 
 #### Shared Data (Consistent Across All Agent Records)
 * **`GC_Virtual_Agent_Summary__c`**: Contains the same virtual agent summary across all agent records
