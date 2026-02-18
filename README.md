@@ -307,171 +307,93 @@ Because `editedReason`, `editedResolution`, and `editedFollowup` are empty objec
 
 > **Note**: This is a Genesys Cloud API behavior, not a workflow bug. The Architect workflow correctly implements the prioritization logic: _use edited if available, otherwise fall back to original_. The limitation is that the API does not split the agent's edits into individual `editedReason`, `editedFollowup`, and `editedResolution` fields.
 
-### Architect Workflow Logic (Deep Dive)
+### Architect Workflow Logic
 
-This section documents how the Architect workflow is structured and how each expression handles the various scenarios that can arise from the Genesys Cloud API response.
+This section explains how the Architect workflow processes the summary data and decides what to push to Salesforce.
 
-#### High-Level Workflow Steps
-
-The workflow follows this execution order:
+#### Workflow Steps
 
 ```
-1. WAIT 5 seconds (give the LLM time to generate summaries)
-       │
+1. WAIT 5 seconds (give the AI time to generate summaries)
+
 2. SWITCH on Flow.mediaType
-       |-- VOICE: Call "Get VoiceCall Ids by InteractionId" -> State.voiceCallIds
-       |-- MESSAGE: Call "Get Experience Ids by InteractionId" -> State.experienceIds
-       +-- Default: End Workflow
-       │
-3. Call "Get Conversation Summary Data v2" -> State.VASegments, State.agentSegments
-       │
-4. DECISION: Is State.agentSegments empty?
-       |-- YES: Parse only VA segments into State.agentSegmentsArray (fallback scenario)
-       +-- NO:  Parse both VA and agent segments into their respective arrays
-       │
-5. LOOP over State.agentSegmentsArray (one iteration per agent segment)
-       │
-       +-- SWITCH on Flow.mediaType
-             |-- VOICE: Call "Update VoiceCall by VoiceCallId with summary info"
-             |-- MESSAGE: Call "Update Experience by ExperienceId with summary info"
-             +-- Default: End Workflow
-       │
+       |-- VOICE: Get VoiceCall IDs from Salesforce
+       |-- MESSAGE: Get Experience IDs from Salesforce
+
+3. Get the conversation summary data from the Genesys Cloud API
+
+4. DECISION: Are there agent segments?
+       |-- YES: Parse both VA and agent segments
+       +-- NO:  Parse only VA segments (fallback)
+
+5. LOOP over each agent segment
+       |-- VOICE: Update VoiceCall record in Salesforce
+       +-- MESSAGE: Update Experience record in Salesforce
+
 6. End Workflow
 ```
 
-#### Expression Logic for Each Input Field
+#### How the Workflow Picks the Right Value
 
-The workflow sends **6 input fields** to the Salesforce update data action. Each field uses a specific expression to determine which value to send:
+For each summary field, the workflow follows the same pattern: **use the edited version if it exists, otherwise fall back to the original**.
 
-##### 1. `virtual_agent_summary` - Virtual Agent (Bot) Summary
-
-```
-If(IsNotSetOrEmpty(State.VASegmentsArray),
-    NOT_SET,
-    ToString(GetJsonObjectProperty(GetAt(State.VASegmentsArray, 0), "text"))
-)
-```
-
-**Logic**: Simple two-level check. If the VA segments array is empty/missing, send `NOT_SET`. Otherwise, always take the `.text` from the first (index 0) virtual agent segment. There is no "edited" variant for the bot summary.
-
-##### 2. `human_agent_summary` - Agent Copilot Summary Text
+Here is how that looks in pseudocode (using `Reason` as an example, but the same pattern applies to Summary, Followup, and Resolution):
 
 ```
-If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           // Level 1
-  If(IsSet(segment.editedSummary),                                // Level 2
-    If(IsSet(segment.editedSummary.text),                         // Level 3
-      ToString(segment.editedSummary.text),                       //   YES -> use edited
-      ToString(segment.text)                                      //   NO  -> use original
-    ),
-    ToString(segment.text)                                        // Property missing -> use original
-  )
-)
+If agentSegmentsArray is empty -> send NOT_SET
+Else:
+  If editedReason exists on the segment:
+    If editedReason.text exists -> use editedReason.text
+    Else -> use reason.text (original)
+  Else -> use reason.text (original)
 ```
 
-> Where `segment` is a shorthand for `GetAt(State.agentSegmentsArray, State.loopCounter)`
+> `segment` refers to `GetAt(State.agentSegmentsArray, State.loopCounter)`, i.e. the current agent segment in the loop.
 
-**Logic**: Three-level nested `If`. Falls back from `editedSummary.text` to `segment.text` (the original AI-generated summary).
+This pattern is applied to all four agent summary fields:
 
-##### 3. `Reason_Text` - Copilot Reason Text
+| Workflow Input | Edited Field Checked | Fallback (Original) |
+|----------------|---------------------|---------------------|
+| `human_agent_summary` | `editedSummary.text` | `segment.text` |
+| `Reason_Text` | `editedReason.text` | `reason.text` |
+| `Followup_Text` | `editedFollowup.text` | `followup.text` |
+| `Resolution_Text` | `editedResolution.text` | `resolution.text` |
 
-```
-If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           // Level 1
-  If(IsSet(segment.editedReason),                                 // Level 2
-    If(IsSet(segment.editedReason.text),                          // Level 3
-      ToString(segment.editedReason.text),                        //   YES -> use edited
-      ToString(segment.reason.text)                               //   NO  -> use original
-    ),
-    ToString(segment.reason.text)                                 // Property missing -> use original
-  )
-)
-```
+The `virtual_agent_summary` field is simpler. It just grabs the `.text` from the first virtual agent segment, or `NOT_SET` if there are none. There is no "edited" variant for bot summaries.
 
-**Logic**: Same three-level pattern. Falls back from `editedReason.text` to `reason.text`.
+#### Why Two Levels of Checking for Each Edited Field?
 
-##### 4. `Followup_Text` - Copilot Follow-up Text
+The Genesys Cloud API can return the edited properties in three different ways:
 
-```
-If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           // Level 1
-  If(IsSet(segment.editedFollowup),                               // Level 2
-    If(IsSet(segment.editedFollowup.text),                        // Level 3
-      ToString(segment.editedFollowup.text),                      //   YES -> use edited
-      ToString(segment.followup.text)                             //   NO  -> use original
-    ),
-    ToString(segment.followup.text)                               // Property missing -> use original
-  )
-)
-```
+| What the API returns | What happens |
+|----------------------|-------------|
+| Property is **missing** from the JSON | The workflow skips it and uses the original |
+| Property is present but **empty** (`{}`) | The workflow skips it and uses the original |
+| Property has a **`.text` value** | The workflow uses the edited value |
 
-**Logic**: Same three-level pattern. Falls back from `editedFollowup.text` to `followup.text`.
+We need two `IsSet` checks (one for the property itself, one for `.text` inside it) because calling `GetJsonObjectProperty` on a missing property would crash the workflow at runtime.
 
-##### 5. `Resolution_Text` - Copilot Resolution Text
+#### Scenarios
 
-```
-If(IsNotSetOrEmpty(State.agentSegmentsArray), NOT_SET,           // Level 1
-  If(IsSet(segment.editedResolution),                             // Level 2
-    If(IsSet(segment.editedResolution.text),                      // Level 3
-      ToString(segment.editedResolution.text),                    //   YES -> use edited
-      ToString(segment.resolution.text)                           //   NO  -> use original
-    ),
-    ToString(segment.resolution.text)                             // Property missing -> use original
-  )
-)
-```
+Here is what gets written to Salesforce depending on what the API returns:
 
-**Logic**: Same three-level pattern. Falls back from `editedResolution.text` to `resolution.text`.
+| # | What happened | SF Summary | SF Reason | SF Follow-up | SF Resolution |
+|---|--------------|-----------|----------|-------------|-------------|
+| 1 | No edits at all | Original | Original | Original | Original |
+| 2 | Agent edited summary only (most common) | **Edited** | Original | Original | Original |
+| 3 | Agent edited all fields individually | **Edited** | **Edited** | **Edited** | **Edited** |
+| 4 | No agent segments available | `NOT_SET` | `NOT_SET` | `NOT_SET` | `NOT_SET` |
 
-##### 6. `voiceCallId` / `experienceId` - Salesforce Record Identifier
+> **Scenario 2** is what typically happens when an agent edits in the ACW Component, since the UI consolidates all edits into `editedSummary.text` and leaves the individual fields empty.
 
-```
-State.voiceCallIds[State.loopCounter]    (VOICE path)
-State.experienceIds[State.loopCounter]   (MESSAGE path)
-```
+#### VOICE vs MESSAGE
 
-**Logic**: Simple array index lookup. Each loop iteration corresponds to a different agent segment / Salesforce record.
+Both paths use the exact same expressions for summary fields. The only difference is which Salesforce record gets updated:
 
-#### Why Three Levels of Checking?
-
-The three-level `IsSet` check is necessary because the Genesys Cloud API can return the edited properties in **three different states**:
-
-| API Response State | Example JSON | Level 2 (`IsSet(editedX)`) | Level 3 (`IsSet(editedX.text)`) | Result |
-|--------------------|-------------|----------------------------|--------------------------------|--------|
-| **Property missing entirely** | _(field absent from JSON)_ | `false` - skip to fallback | _(not evaluated)_ | Uses original |
-| **Property exists but empty** (`{}`) | `"editedReason": {}` | `true` - enter Level 3 | `false` - skip to fallback | Uses original |
-| **Property exists with text** | `"editedReason": {"text": "..."}` | `true` - enter Level 3 | `true` - use edited | Uses edited |
-
-Without Level 2, calling `GetJsonObjectProperty(editedX, "text")` on a `NOT_SET` value (missing property) would cause a **runtime crash** in Architect. Without Level 3, an empty object `{}` would also cause issues. The two-level guard makes sure the workflow can handle all possible API response variations.
-
-#### All Possible Scenarios Matrix
-
-Here is a matrix of all the possible API response scenarios and what the workflow writes to each Salesforce field:
-
-| # | `editedSummary` | `editedReason` | `editedFollowup` | `editedResolution` | SF Summary | SF Reason | SF Follow-up | SF Resolution |
-|---|-----------------|----------------|-------------------|--------------------|-----------:|----------:|-------------:|-------------:|
-| 1 | _(missing)_ | _(missing)_ | _(missing)_ | _(missing)_ | `segment.text` | `reason.text` | `followup.text` | `resolution.text` |
-| 2 | `{}` | `{}` | `{}` | `{}` | `segment.text` | `reason.text` | `followup.text` | `resolution.text` |
-| 3 | `{"text":"..."}` | `{}` | _(missing)_ | `{}` | **editedSummary.text** | `reason.text` | `followup.text` | `resolution.text` |
-| 4 | `{"text":"..."}` | `{"text":"..."}` | `{"text":"..."}` | `{"text":"..."}` | **editedSummary.text** | **editedReason.text** | **editedFollowup.text** | **editedResolution.text** |
-| 5 | `{}` | `{"text":"..."}` | `{}` | `{"text":"..."}` | `segment.text` | **editedReason.text** | `followup.text` | **editedResolution.text** |
-| 6 | _Empty array_ | _Empty array_ | _Empty array_ | _Empty array_ | `NOT_SET` | `NOT_SET` | `NOT_SET` | `NOT_SET` |
-
-- **Scenario 1**: No edited fields exist at all (property missing from JSON). All fields fall back to originals.
-- **Scenario 2**: Edited fields exist but are empty objects. All fields fall back to originals.
-- **Scenario 3**: The most common "edited" scenario (as seen in the CX Cloud ACW Component). The agent edited the summary, but reason/followup/resolution were not individually edited.
-- **Scenario 4**: Ideal scenario where all fields have been individually edited.
-- **Scenario 5**: Mixed scenario (some fields edited individually, others not).
-- **Scenario 6**: No agent segments at all (the `agentSegmentsArray` is empty). All fields are set to `NOT_SET`.
-
-#### VOICE vs MESSAGE Path Consistency
-
-Both the **VOICE** and **MESSAGE** paths in the workflow use **identical expression logic** for all summary fields. The only differences are:
-
-| Aspect | VOICE Path | MESSAGE Path |
-|--------|-----------|-------------|
-| **Salesforce Record ID** | `State.voiceCallIds[State.loopCounter]` | `State.experienceIds[State.loopCounter]` |
-| **Data Action** | `Update VoiceCall by VoiceCallId with summary info` | `Update Experience by ExperienceId with summary info` |
-| **Summary expressions** | _(identical)_ | _(identical)_ |
-
-This keeps behavior consistent regardless of whether the interaction was a voice call or a messaging conversation.
+| | VOICE | MESSAGE |
+|---|-------|---------|
+| **SF Record** | `VoiceCall` (by VoiceCallId) | `Experience` (by ExperienceId) |
+| **Summary logic** | Same | Same |
 
 ---
 
