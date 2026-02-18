@@ -263,13 +263,12 @@ When the agent **does not edit** any summary fields, all Salesforce fields are p
 
 Each field is populated with its own distinct, AI-generated value. This is the ideal behavior.
 
-![Non-edited summary in Salesforce]
+<img width="1075" height="485" alt="image" src="https://github.com/user-attachments/assets/41342658-8c71-4ddc-b129-6c71ec55b9fa" />
 
-![alt text](image.png)
 
-#### Scenario 2: Agent Edits the Summary (Known API Limitation)
+#### Scenario 2: Agent Edits the Summary
 
-When the agent **edits the summary** via the CX Cloud ACW Component, a **known limitation of the Genesys Cloud API** affects how the data is distributed across Salesforce fields:
+When the agent **edits the summary** via the CX Cloud ACW Component, a the API response affects how the data is distributed across Salesforce fields:
 
 | Salesforce Field | Source | Behavior |
 |------------------|--------|----------|
@@ -278,9 +277,8 @@ When the agent **edits the summary** via the CX Cloud ACW Component, a **known l
 | **GC Copilot Follow-up Text** | `agentSegment.followup.text` | Falls back to **original** AI-generated value |
 | **GC Copilot Resolution Text** | `agentSegment.resolution.text` | Falls back to **original** AI-generated value |
 
-![Edited summary in Salesforce]!
+<img width="1088" height="818" alt="image" src="https://github.com/user-attachments/assets/c4a7b21d-9457-4d58-962e-6f80fc203650" />
 
-[alt text](image-1.png)
 
 #### Why This Happens
 
